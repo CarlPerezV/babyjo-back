@@ -1,11 +1,9 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { UserModel } from "../models/user.model.js";
+import { log, logErr } from "../utils/logger.js";
 
 const signToken = (payload) => {
-    if (!process.env.JWT_SECRET) {
-        throw new Error("Falta la variable de entorno JWT_SECRET");
-    }
     return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
 }
 
@@ -13,6 +11,11 @@ const signToken = (payload) => {
 export const register = async (req, res) => {
     try {
         const { firstName, lastName, email, password } = req.body;
+
+        if (!firstName || !lastName || !email || !password) {
+            return res.status(400).json({ message: "Faltan campos requeridos" });
+        }
+
         const emailNorm = email.trim().toLowerCase();
 
         // Verificar si ya existe
@@ -33,10 +36,16 @@ export const register = async (req, res) => {
             firstName: newUser.first_name,
             lastName: newUser.last_name,
             email: newUser.email,
-            role: newUser.role_id,
+            role_id: newUser.role_id,
         };
 
-        const token = signToken({ id: user.id, email: user.email, role: user.role });
+        const token = signToken({ id: user.id, email: user.email, role_id: user.role_id });
+
+        // mensaje de registro en consola
+        log("user.registered", {
+            email: user.email,
+            role_id: user.role_id === "2" ? "admin" : "user",
+        });
 
         res.status(201).json({
             message: "Usuario registrado correctamente",
@@ -44,6 +53,11 @@ export const register = async (req, res) => {
             token,
         });
     } catch (error) {
+        logErr("user.register.failed", {
+            email: req?.body?.email?.toLowerCase?.(),
+            reason: error?.message,
+            ip: req.ip,
+        });
         console.error("Error en registro:", error);
         res.status(500).json({ message: "Error en el servidor" });
     }
@@ -51,9 +65,9 @@ export const register = async (req, res) => {
 
 // LOGIN
 export const login = async (req, res) => {
-    const { email, password } = req.body;
-    const emailNorm = email.trim().toLowerCase();
     try {
+        const { email, password } = req.body;
+        const emailNorm = email.trim().toLowerCase();
         // Buscar usuario
         const row = await UserModel.findUserByEmail(emailNorm);
 
@@ -70,15 +84,22 @@ export const login = async (req, res) => {
             firstName: row.first_name,
             lastName: row.last_name,
             email: row.email,
-            role: row.role_id,
+            role_id: row.role_id,
         };
 
-        const token = signToken({ id: user.id, email: user.email, role: user.role });
+        const token = signToken({ id: user.id, email: user.email, role_id: user.role_id });
+
+        // mensaje de registro en consola
+        log("user.logged_in", {
+            email: user.email,
+            role_id: user.role_id === "2" ? "admin" : "user",
+        });
 
         return res.json({
             token, user
         });
     } catch (error) {
+        logErr("user.login.failed", { email: req?.body?.email?.toLowerCase?.(), reason: error?.message, ip: req.ip });
         res.status(500).json({ error: "Error en el login" });
     }
 };
@@ -93,7 +114,7 @@ export const me = async (req, res) => {
             firstName: row.first_name,
             lastName: row.last_name,
             email: row.email,
-            role: row.role_id,
+            role_id: row.role_id,
         };
 
         return res.json({ user });

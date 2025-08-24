@@ -1,55 +1,38 @@
 import pool from "../config/db.js";
 
 export const ProductModel = {
-    async createProduct({ name, description, price, image_url, rating = 4.0, sizes = [] }) {
+
+    async createProduct({ name, description, price, image_url, rating = 0, sizes = [] }) {
         const client = await pool.connect();
         try {
             await client.query("BEGIN");
 
             const insertProduct = `INSERT INTO products (name, description, price, image_url, rating) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, description, price, image_url, rating`;
-            const { rows } = await client.query(insertProduct, [
-                name,
-                description,
-                price,
-                image_url,
-                rating,
-            ]);
+            const values = [name, description, price, image_url, Number(rating) || 0];
+            const { rows } = await client.query(insertProduct, values);
             const product = rows[0];
 
-            let sizesValues = [];
-            if (Array.isArray(sizes) && sizes.length > 0) {
-                sizesValues = sizes
-                    .map((item) => {
-                        if (item && typeof item === "object" && "size" in item) {
-                            return {
-                                size: String(item.size ?? "").trim(),
-                                stock: Number(item.stock),
-                            };
-                        }
-                        // Si viene como string/number, stock por defecto 0
-                        return {
-                            size: String(item ?? "").trim(),
-                            stock: 0,
-                        };
-                    })
-                    .filter((s) => s.size && Number.isFinite(s.stock) && s.stock >= 0);
-            }
+            // Normaliza tallas → [{ size, quantity }]
+            const sizesValues = Array.isArray(sizes)
+                ? sizes
+                    .map((item) => ({
+                        size: String(item?.size || "").trim(),
+                        quantity: Number(item?.stock ?? item?.quantity ?? 0),
+                    }))
+                    .filter((s) => s.size && Number.isInteger(s.quantity) && s.quantity >= 0)
+                : [];
 
             if (sizesValues.length > 0) {
                 const sizeArr = sizesValues.map((s) => s.size);
-                const stockArr = sizesValues.map((s) => Math.trunc(s.stock)); // asegurar int
-
+                const quantityArr = sizesValues.map((s) => Math.trunc(s.quantity));
                 await client.query(
-                    `INSERT INTO product_sizes (product_id, size, stock) SELECT $1, UNNEST($2::text[]), UNNEST($3::int[]) ON CONFLICT (product_id, size) DO UPDATE SET stock = EXCLUDED.stock`,
-                    [product.id, sizeArr, stockArr]
+                    `INSERT INTO inventory (product_id, size, quantity) SELECT $1, UNNEST($2::text[]), UNNEST($3::int[]) ON CONFLICT (product_id, size) DO UPDATE SET quantity = EXCLUDED.quantity`,
+                    [product.id, sizeArr, quantityArr]
                 );
             }
 
-            const selectOne = `SELECT p.id, p.name, p.description, p.price, p.image_url, COALESCE(json_agg(json_build_object('size', ps.size, 'stock', ps.stock)) FILTER (WHERE ps.size IS NOT NULL), '[]') AS sizes FROM products p LEFT JOIN product_sizes ps ON ps.product_id = p.id WHERE p.id = $1 GROUP BY p.id`;
-            const { rows: finalRows } = await client.query(selectOne, [product.id]);
-
             await client.query("COMMIT");
-            return finalRows[0];
+            return this.findById(product.id);
         } catch (err) {
             await client.query("ROLLBACK");
             throw err;
@@ -58,15 +41,18 @@ export const ProductModel = {
         }
     },
 
+    // LISTA productos con sizes + stock (json array)
     async findAll({ limit = 10, offset = 0 } = {}) {
-        const query = `SELECT p.id, p.name, p.description, p.price, p.image_url, p.rating, COALESCE(json_agg(json_build_object('size', ps.size, 'stock', ps.stock)) FILTER (WHERE ps.size IS NOT NULL), '[]' ) AS sizes FROM products p LEFT JOIN product_sizes ps ON ps.product_id = p.id GROUP BY p.id ORDER BY p.id DESC LIMIT $1 OFFSET $2`;
-        const { rows } = await pool.query(query, [limit, offset]);
-        return rows;
+        const query = `SELECT p.id, p.name, p.description, p.price, p.image_url, p.rating, COALESCE(json_agg(json_build_object('size', i.size, 'stock', i.quantity) ORDER BY i.size) FILTER (WHERE i.size IS NOT NULL), '[]' ) AS sizes FROM products p LEFT JOIN inventory i ON i.product_id = p.id GROUP BY p.id ORDER BY p.id DESC LIMIT $1 OFFSET $2`;
+        const result = await pool.query(query, [limit, offset]);
+        return result.rows;
     },
 
+    // DETALLE con sizes + stock (json array)
     async findById(id) {
-        const q = `SELECT p.id, p.name, p.description, p.price, p.image_url, p.rating, COALESCE(json_agg(json_build_object('size', ps.size, 'stock', ps.stock)) FILTER (WHERE ps.size IS NOT NULL), '[]' ) AS sizes FROM products p LEFT JOIN product_sizes ps ON ps.product_id = p.id WHERE p.id = $1 GROUP BY p.id`;
-        const { rows } = await pool.query(q, [id]);
+        const query = `SELECT p.id, p.name, p.description, p.price, p.image_url, p.rating, COALESCE(json_agg(json_build_object('size', i.size, 'stock', i.quantity)) FILTER (WHERE i.size IS NOT NULL), '[]' ) AS sizes FROM products p LEFT JOIN inventory i ON i.product_id = p.id WHERE p.id = $1 GROUP BY p.id`;
+
+        const { rows } = await pool.query(query, [id]);
         return rows[0];
     },
 };

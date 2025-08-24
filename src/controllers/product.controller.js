@@ -2,31 +2,41 @@ import { ProductModel } from "../models/product.model.js";
 
 export const addProduct = async (req, res) => {
     try {
-        const { name, description, price, rating, sizes = [], image_url = null } = req.body;
+        const { name, description, price, rating = 0, sizes = [] } = req.body;
 
-        const nameTrim = String(name).trim();
+        const nameTrim = String(name || "").trim();
         if (!nameTrim) return res.status(400).json({ message: "El nombre es obligatorio" });
 
         const priceNum = Number(price);
         if (!Number.isFinite(priceNum) || priceNum < 0) {
             return res.status(400).json({ message: "Precio inválido" });
         }
-
-        const ratingNum = rating === undefined || rating === null ? NaN : Number(rating);
-        const ratingVal = Number.isFinite(ratingNum)
-            ? Math.min(5, Math.max(0, Number(ratingNum.toFixed(1))))
-            : Number((Math.random() * 1.5 + 3.5).toFixed(1));
-
+        const ratingNum = Number(rating);
+        if (!Number.isFinite(ratingNum) || ratingNum < 0 || ratingNum > 5) {
+            return res.status(400).json({ message: "Invalid rating (0..5)" });
+        }
         if (!Array.isArray(sizes)) {
             return res.status(400).json({ message: "sizes debe ser un arreglo" });
+        }
+
+        console.log("[addProduct] incoming sizes:", sizes);
+
+        // Acepta el dato si viene como image o image_url
+        let image_url = req.body.image_url ?? req.body.image ?? null;
+        if (typeof req.body.image !== "undefined" && typeof req.body.image_url !== "undefined" && req.body.image !== req.body.image_url
+        ) {
+            return res.status(400).json({
+                message:
+                    "Campos conflictivos: 'image' y 'image_url' difieren. Usa solo 'image_url' (o mismo valor en ambos).",
+            });
         }
 
         const product = await ProductModel.createProduct({
             name: nameTrim,
             description: String(description ?? ""),
             price: priceNum,
-            rating: ratingVal,
-            image_url: image_url || null,
+            rating: ratingNum,
+            image_url,
             sizes,
         });
 
