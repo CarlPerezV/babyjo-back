@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node ./src/index.js",
+    "dev": "nodemon index.js",
+    "test": "cross-env NODE_ENV=test vitest run"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +22,9 @@
     "pg-format": "^1.0.4"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "cross-env": "^10.0.0",
+    "nodemon": "^3.1.10",
+    "supertest": "^7.1.4",
+    "vitest": "^3.2.4"
   }
 }

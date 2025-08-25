@@ -1,13 +1,13 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+dotenv.config();
 
 // Rutas 
 import authRoutes from "./src/routes/auth.routes.js";
 import productRoutes from "./src/routes/product.routes.js";
 import orderRoutes from "./src/routes/order.routes.js";
 
-dotenv.config();
 const app = express();
 
 // Middlewares

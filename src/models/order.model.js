@@ -1,6 +1,4 @@
 import pool from "../config/db.js";
-import { log, logErr } from "../utils/logger.js";
-
 
 export const OrderModel = {
 

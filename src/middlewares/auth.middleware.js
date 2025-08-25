@@ -8,7 +8,7 @@ export const requireAuth = (req, res, next) => {
 
     try {
         const payload = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = { id: payload.id, email: payload.email, role: payload.role };
+        req.user = { id: payload.id, email: payload.email, role_id: payload.role_id };
         next();
     } catch {
         return res.status(401).json({ message: "Token inválido" });
@@ -16,6 +16,6 @@ export const requireAuth = (req, res, next) => {
 };
 
 export function adminOnly(req, res, next) {
-    if (Number(req.user?.role) === 1) return next(); // role 1 = admin
+    if (Number(req.user?.role_id) === 1) return next(); // role_id 1 = admin
     return res.status(403).json({ message: "Requiere rol administrador" });
 }

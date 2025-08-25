@@ -1,6 +1,6 @@
 
 import { OrderModel } from "../models/order.model.js";
-import { log, logErr } from "../utils/logger.js";
+// import { log, logErr } from "../utils/logger.js";
 
 export const checkout = async (req, res) => {
     try {
@@ -19,23 +19,23 @@ export const checkout = async (req, res) => {
         const result = await OrderModel.createOrder(userId, items, paymentMethod);
 
         // mensaje de registro en consola
-        log("order.created", {
-            userId, items, paymentMethod, items: items.map(i => ({
-                name: i.name,
-                productId: i.productId,
-                size: i.size,
-                quantity: i.quantity,
-            })),
-        });
+        // log("order.created", {
+        //     userId, items, paymentMethod, items: items.map(i => ({
+        //         name: i.name,
+        //         productId: i.productId,
+        //         size: i.size,
+        //         quantity: i.quantity,
+        //     })),
+        // });
 
         return res.status(201).json(result);
     } catch (e) {
         console.error("Checkout error:", e);
-        logErr("order.created.failed", {
-            user_id: req?.user?.id,
-            reason: e?.message,
-            ip: req.ip,
-        });
+        // logErr("order.created.failed", {
+        //     user_id: req?.user?.id,
+        //     reason: e?.message,
+        //     ip: req.ip,
+        // });
         const msg = e.message || "Error en checkout";
         // Si es por stock insuficiente u otra validación → 400
         if (/Stock insuficiente|no encontrado|inválido/i.test(msg)) {
