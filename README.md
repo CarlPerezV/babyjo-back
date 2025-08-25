@@ -38,8 +38,9 @@ El prefijo `/api/auth` está montado en la app principal, junto con otras rutas 
 
 ### Cómo correr las pruebas
 
-````bash
+```bash
 npm test
+```
 
 ### Scripts configurados (referencia rápida)
 
@@ -51,11 +52,12 @@ npm test
     "test": "cross-env NODE_ENV=test vitest run"
   }
 }
+```
 
-**Dependencias de producción
+### Dependencias de producción
 
-| Paquete      | Versión | Estado      | Descripción breve                                          |
-| ------------ | ------- | ----------- | ---------------------------------------------------------- |
+| Paquete      | Versión | Estado       | Descripción breve                                          |
+| ------------ | ------- | ------------ | ---------------------------------------------------------- |
 | bcryptjs     | ^3.0.2  | ✅ Instalada | Hash de contraseñas en JS puro.                            |
 | cors         | ^2.8.5  | ✅ Instalada | Habilita CORS para el servidor Express.                    |
 | dotenv       | ^17.2.1 | ✅ Instalada | Carga variables de entorno desde `.env`.                   |
@@ -64,12 +66,13 @@ npm test
 | pg           | ^8.16.3 | ✅ Instalada | Cliente de PostgreSQL para Node.js.                        |
 | pg-format    | ^1.0.4  | ✅ Instalada | Formateo seguro de strings SQL (placeholders estilo `%s`). |
 
-
-```npm i bcryptjs@3.0.2 cors@2.8.5 dotenv@17.2.1 express@5.1.0 jsonwebtoken@9.0.2 pg@8.16.3 pg-format@1.0.4
+```js
+npm i bcryptjs@3.0.2 cors@2.8.5 dotenv@17.2.1 express@5.1.0 jsonwebtoken@9.0.2 pg@8.16.3 pg-format@1.0.4
+```
 
 ## Fragmentos de pruebas (extractos)
 
-> Fecha de inclusión: 2025-08-25
+> Fecha de inclusión: 2025-08-24
 
 A continuación se muestran extractos representativos de las pruebas automatizadas (Vitest + Supertest). Cada fragmento conserva su estructura original.
 
@@ -77,86 +80,119 @@ A continuación se muestran extractos representativos de las pruebas automatizad
 
 ```js
 it("400 si faltan campos", async () => {
-  const res = await request(app).post("/api/auth/register").send({ email: "a@a.cl" });
+  const res = await request(app)
+    .post("/api/auth/register")
+    .send({ email: "a@a.cl" });
   expect(res.statusCode).toBe(400);
 });
+```
 
-**2. 409 si el usuario ya existe
+**2. 409 si el usuario ya existe**
+
 ```js
 it("409 si el usuario ya existe", async () => {
   UserModel.findUserByEmail.mockResolvedValueOnce({ id: 1, email: "a@a.cl" });
-  const res = await request(app).post("/api/auth/register").send({ firstName: "A", lastName: "B", email: "a@a.cl", password: "123" });
+  const res = await request(app)
+    .post("/api/auth/register")
+    .send({ firstName: "A", lastName: "B", email: "a@a.cl", password: "123" });
   expect(res.statusCode).toBe(409);
 });
+```
 
-**3. 201 si registro exitoso entrega token y user
+**3. 201 si registro exitoso entrega token y user**
+
 ```js
 it("201 si registro exitoso entrega token y user", async () => {
   UserModel.findUserByEmail.mockResolvedValueOnce(null);
   UserModel.createUser.mockResolvedValueOnce({
-    id: 10, first_name: "A", last_name: "B", email: "a@a.cl", role_id: 2,
+    id: 10,
+    first_name: "A",
+    last_name: "B",
+    email: "a@a.cl",
+    role_id: 2,
   });
-  const res = await request(app).post("/api/auth/register").send({ firstName: "A", lastName: "B", email: "a@a.cl", password: "123" });
+  const res = await request(app)
+    .post("/api/auth/register")
+    .send({ firstName: "A", lastName: "B", email: "a@a.cl", password: "123" });
   expect(res.statusCode).toBe(201);
   expect(res.body).toHaveProperty("token");
   expect(res.body).toHaveProperty("user");
 });
+```
 
+**4. 400 si faltan credenciales**
 
-**4. 400 si faltan credenciales
 ```js
 it("400 si faltan credenciales", async () => {
-  const res = await request(app).post("/api/auth/login").send({ email: "a@a.cl" });
+  const res = await request(app)
+    .post("/api/auth/login")
+    .send({ email: "a@a.cl" });
   expect(res.statusCode).toBe(400);
 });
+```
 
+**5. 401 si el usuario no existe**
 
-**5. 401 si el usuario no existe
 ```js
 it("401 si el usuario no existe", async () => {
   UserModel.findUserByEmail.mockResolvedValueOnce(null);
-  const res = await request(app).post("/api/auth/login").send({ email: "a@a.cl", password: "123" });
+  const res = await request(app)
+    .post("/api/auth/login")
+    .send({ email: "a@a.cl", password: "123" });
   expect(res.statusCode).toBe(401);
 });
+```
 
+**6. 401 si la contraseña es inválida**
 
-**6. 401 si la contraseña es inválida
 ```js
 it("401 si la contraseña es inválida", async () => {
-  UserModel.findUserByEmail.mockResolvedValueOnce({ id: 1, email: "a@a.cl", password: "hashed" });
+  UserModel.findUserByEmail.mockResolvedValueOnce({
+    id: 1,
+    email: "a@a.cl",
+    password: "hashed",
+  });
   bcrypt.compare.mockResolvedValueOnce(false);
-  const res = await request(app).post("/api/auth/login").send({ email: "a@a.cl", password: "mala" });
+  const res = await request(app)
+    .post("/api/auth/login")
+    .send({ email: "a@a.cl", password: "mala" });
   expect(res.statusCode).toBe(401);
 });
+```
 
+**7. 200 si login exitoso entrega token y user**
 
-**7. 200 si login exitoso entrega token y user
 ```js
 it("200 si login exitoso entrega token y user", async () => {
   UserModel.findUserByEmail.mockResolvedValueOnce({
-    id: 2, first_name: "A", last_name: "B", email: "a@a.cl", password: "hashed", role_id: 2,
+    id: 2,
+    first_name: "A",
+    last_name: "B",
+    email: "a@a.cl",
+    password: "hashed",
+    role_id: 2,
   });
   bcrypt.compare.mockResolvedValueOnce(true);
-  const res = await request(app).post("/api/auth/login").send({ email: "a@a.cl", password: "123" });
+  const res = await request(app)
+    .post("/api/auth/login")
+    .send({ email: "a@a.cl", password: "123" });
   expect(res.statusCode).toBe(200);
   expect(res.body).toHaveProperty("token");
   expect(res.body).toHaveProperty("user");
 });
-
-
+```
 
 ## 📊 Resumen de casos de prueba
 
-| #  | Ruta / Endpoint          | Escenario probado                          | Código esperado |
-|----|--------------------------|--------------------------------------------|-----------------|
-| 1  | `POST /api/auth/register` | Falta un campo requerido                   | 400             |
-| 2  | `POST /api/auth/register` | Usuario ya existe                          | 409             |
-| 3  | `POST /api/auth/register` | Registro exitoso, devuelve token y usuario | 201             |
-| 4  | `POST /api/auth/login`    | Faltan credenciales                        | 400             |
-| 5  | `POST /api/auth/login`    | Usuario no encontrado                      | 401             |
-| 6  | `POST /api/auth/login`    | Contraseña incorrecta                      | 401             |
-| 7  | `POST /api/auth/login`    | Login exitoso, devuelve token y usuario    | 200             |
-| 8  | `GET /`                   | Ruta de salud de la API                    | 200             |
-| 9  | `GET /api/auth/me`        | Sin token en cabecera                      | 401             |
-| 10 | `GET /api/auth/me`        | Con token válido, devuelve datos de usuario| 200             |
-````
+| #   | Ruta / Endpoint           | Escenario probado                           | Código esperado |
+| --- | ------------------------- | ------------------------------------------- | --------------- |
+| 1   | `POST /api/auth/register` | Falta un campo requerido                    | 400             |
+| 2   | `POST /api/auth/register` | Usuario ya existe                           | 409             |
+| 3   | `POST /api/auth/register` | Registro exitoso, devuelve token y usuario  | 201             |
+| 4   | `POST /api/auth/login`    | Faltan credenciales                         | 400             |
+| 5   | `POST /api/auth/login`    | Usuario no encontrado                       | 401             |
+| 6   | `POST /api/auth/login`    | Contraseña incorrecta                       | 401             |
+| 7   | `POST /api/auth/login`    | Login exitoso, devuelve token y usuario     | 200             |
+| 8   | `GET /`                   | Ruta de salud de la API                     | 200             |
+| 9   | `GET /api/auth/me`        | Sin token en cabecera                       | 401             |
+| 10  | `GET /api/auth/me`        | Con token válido, devuelve datos de usuario | 200             |
