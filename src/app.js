@@ -28,6 +28,7 @@ app.use((req, res, next) => {
 });
 
 // Rutas
+app.use("/auth", authRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/products", productRoutes);
 app.use("/orders", orderRoutes);
