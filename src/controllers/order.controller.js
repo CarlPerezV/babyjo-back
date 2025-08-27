@@ -8,7 +8,7 @@ export const checkout = async (req, res) => {
         if (!req.user?.id) {
             return res.status(401).json({ message: "No autorizado" });
         }
-        const userId = req.user?.id ?? null; // requiere verifyToken si quieres forzar login
+        const userId = req.user?.id ?? null; // ID del usuario autenticado
         const items = Array.isArray(req.body.items) ? req.body.items : [];
         const paymentMethod = req.body.paymentMethod || "pending";
 
