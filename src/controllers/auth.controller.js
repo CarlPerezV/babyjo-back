@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { UserModel } from "../models/user.model.js";
-// import { log, logErr } from "../utils/logger.js";
+import { log, logErr } from "../utils/logger.js";
 
 const signToken = (payload) => {
     if (!process.env.JWT_SECRET) {
@@ -89,13 +89,13 @@ export const login = async (req, res) => {
 
         const token = signToken({ id: user.id, email: user.email, role_id: user.role_id });
 
-        console.error("[AUTH] login error:", e.message);
+        log("auth.login.ok", { email, userId: row.id });
 
         return res.json({
             token, user
         });
     } catch (error) {
-        // logErr("user.login.failed", { email: req?.body?.email?.toLowerCase?.(), reason: error?.message, ip: req.ip });
+        logErr("user.login.failed", { email: req?.body?.email?.toLowerCase?.(), reason: error?.message, ip: req.ip });
         res.status(500).json({ error: "Error en el login" });
     }
 };
