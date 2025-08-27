@@ -4,6 +4,10 @@ import { UserModel } from "../models/user.model.js";
 // import { log, logErr } from "../utils/logger.js";
 
 const signToken = (payload) => {
+    if (!process.env.JWT_SECRET) {
+        console.error("[AUTH] JWT_SECRET not configured");
+        throw new Error("JWT_SECRET no está definido en las variables de entorno");
+    }
     return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
 }
 
@@ -41,23 +45,13 @@ export const register = async (req, res) => {
 
         const token = signToken({ id: user.id, email: user.email, role_id: user.role_id });
 
-        // mensaje de registro en consola
-        // log("user.registered", {
-        //     email: user.email,
-        //     role_id: user.role_id === "2" ? "admin" : "user",
-        // });
-
         res.status(201).json({
             message: "Usuario registrado correctamente",
             user,
             token,
         });
     } catch (error) {
-        // logErr("user.register.failed", {
-        //     email: req?.body?.email?.toLowerCase?.(),
-        //     reason: error?.message,
-        //     ip: req.ip,
-        // });
+
         console.error("Error en registro:", error);
         res.status(500).json({ message: "Error en el servidor" });
     }
@@ -67,6 +61,9 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
+
+        console.log(`[AUTH] login attempt email=${email}`);
+
         if (!email || !password) {
             return res.status(400).json({ message: "Faltan credenciales" });
         }
@@ -92,11 +89,7 @@ export const login = async (req, res) => {
 
         const token = signToken({ id: user.id, email: user.email, role_id: user.role_id });
 
-        // mensaje de registro en consola
-        // log("user.logged_in", {
-        //     email: user.email,
-        //     role_id: user.role_id === "2" ? "admin" : "user",
-        // });
+        console.error("[AUTH] login error:", e.message);
 
         return res.json({
             token, user

@@ -19,6 +19,14 @@ app.get("/", (_req, res) => {
     res.json({ message: "Backend OK" });
 });
 
+app.use((req, res, next) => {
+    const t0 = Date.now();
+    res.on("finish", () => {
+        console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} -> ${res.statusCode} ${Date.now() - t0}ms`);
+    });
+    next();
+});
+
 // Rutas
 app.use("/api/auth", authRoutes);
 app.use("/products", productRoutes);
