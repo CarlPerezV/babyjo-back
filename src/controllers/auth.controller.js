@@ -87,6 +87,15 @@ export const login = async (req, res) => {
             role_id: row.role_id,
         };
 
+        // Solo para probar en desarrollo
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+            console.error("[AUTH] Missing JWT_SECRET env var");
+            // Opcional: log estructurado
+            logErr?.("auth.login.failed", { reason: "missing_jwt_secret", email });
+            return res.status(500).json({ message: "Configuración de token ausente" });
+        }
+
         const token = signToken({ id: user.id, email: user.email, role_id: user.role_id });
 
         log("auth.login.ok", { email, userId: row.id });
