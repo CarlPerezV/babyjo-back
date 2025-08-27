@@ -22,12 +22,7 @@ export const OrderModel = {
                 }
 
                 // Traer precio y stock con lock
-                const q = `
-          SELECT p.id, p.price, i.quantity
-          FROM products p
-          JOIN inventory i ON i.product_id = p.id AND i.size = $2
-          WHERE p.id = $1
-          FOR UPDATE
+                const q = `SELECT p.id, p.price, i.quantity FROM products p JOIN inventory i ON i.product_id = p.id AND i.size = $2 WHERE p.id = $1 FOR UPDATE
         `;
                 const { rows } = await client.query(q, [productId, size]);
                 if (!rows[0]) throw new Error(`Producto ${productId} talla ${size} no encontrado`);
@@ -65,10 +60,7 @@ export const OrderModel = {
 
             // 4) Devolver líneas + subtotal calculado al vuelo (no almacenado)
             const { rows: itemsRows } = await client.query(
-                `SELECT product_id, size, quantity, price
-         FROM order_items
-         WHERE order_id = $1
-         ORDER BY id`,
+                `SELECT product_id, size, quantity, price FROM order_items WHERE order_id = $1 ORDER BY id`,
                 [order.id]
             );
 
@@ -86,13 +78,9 @@ export const OrderModel = {
         }
     },
 
-    async summary() {
-        const { rows } = await pool.query(
-            `SELECT COUNT(*)::int AS orders_count,
-              COALESCE(SUM(total),0)::int AS total
-       FROM orders
-       WHERE status = 'pending'`
-        );
-        return rows[0];
+    async listByUser(userId) {
+        const q = `SELECT o.id, o.created_at AS order_date, o.total, o.status, o.payment_method, COALESCE(json_agg(json_build_object('product_id', oi.product_id, 'name', p.name, 'size', oi.size, 'quantity', oi.quantity, 'unit_price', oi.price, 'line_total', (oi.quantity * oi.price))) FILTER (WHERE oi.id IS NOT NULL), '[]' ) AS items FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id LEFT JOIN products p ON p.id = oi.product_id WHERE o.user_id = $1 GROUP BY o.id ORDER BY o.created_at DESC`;
+        const { rows } = await pool.query(q, [userId]);
+        return rows;
     },
 };

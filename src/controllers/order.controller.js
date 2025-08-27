@@ -18,24 +18,11 @@ export const checkout = async (req, res) => {
 
         const result = await OrderModel.createOrder(userId, items, paymentMethod);
 
-        // mensaje de registro en consola
-        // log("order.created", {
-        //     userId, items, paymentMethod, items: items.map(i => ({
-        //         name: i.name,
-        //         productId: i.productId,
-        //         size: i.size,
-        //         quantity: i.quantity,
-        //     })),
-        // });
 
         return res.status(201).json(result);
     } catch (e) {
         console.error("Checkout error:", e);
-        // logErr("order.created.failed", {
-        //     user_id: req?.user?.id,
-        //     reason: e?.message,
-        //     ip: req.ip,
-        // });
+
         const msg = e.message || "Error en checkout";
         // Si es por stock insuficiente u otra validación → 400
         if (/Stock insuficiente|no encontrado|inválido/i.test(msg)) {
@@ -45,12 +32,17 @@ export const checkout = async (req, res) => {
     }
 };
 
-export const salesSummary = async (_req, res) => {
+export const myOrders = async (req, res) => {
+    const userId = req.user?.id;
+    if (!userId) {
+        return res.status(401).json({ message: "No autenticado" });
+    }
+
     try {
-        const sum = await OrderModel.summary();
-        return res.json(sum);
+        const orders = await OrderModel.listByUser(userId);
+        return res.json({ orders });
     } catch (e) {
-        console.error("Sales summary error:", e);
-        return res.status(500).json({ message: "Error interno" });
+        console.error("myOrders error:", e);
+        return res.status(500).json({ message: "Error obteniendo tus compras" });
     }
 };
